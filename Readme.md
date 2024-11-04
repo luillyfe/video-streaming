@@ -39,7 +39,7 @@ npm install
 │   ├── index.ts          # Server setup and configuration
 │   ├── routes.ts         # Route handlers
 │   ├── range-request.ts  # Range parsing logic
-│   └── index.html        # (Optional) Simple video player page
+├── index.html            # (Optional) Simple video player page
 ├── video.mp4             # Your video file
 ├── package.json
 └── tsconfig.json
@@ -147,3 +147,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [NearForm - How to Implement Video Streaming with Fastify](https://www.nearform.com/digital-community/how-to-implement-video-streaming-with-fastify/)
 - [Fastify Range](https://github.com/Eomm/fastify-range)
 - [Stack Overflow - Video Streaming Best Practices](https://stackoverflow.com/q/21765555/3309466)
+
+---
+
+Made with ❤️ by Fermin Blanco
+
+🚀 [Visit my site](https://luillyfe.medium.com/)
