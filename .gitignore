@@ -1,0 +1,17 @@
+# Node.js
+node_modules/
+npm-debug.log
+
+# Logs
+*.log
+
+# IDEs
+.idea/
+.vscode/
+
+# Other
+*.bak
+*.tmp
+*.env
+#
+src/db.ts
