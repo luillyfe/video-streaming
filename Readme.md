@@ -1,6 +1,39 @@
 # Video Streaming Server
 
+![Video Streaming Workflow](workflow.png)
+
 A high-performance video streaming server built with Fastify and TypeScript that supports HTTP range requests for efficient video delivery.
+
+## Workflow
+
+1. Client Side:
+- Browser makes range requests
+- Video Player handles the streaming display
+
+
+2. Server Components:
+- Routes: Entry point for video streaming requests
+- Range Parser: Handles HTTP range headers
+- Stream Handler: Manages video file streaming
+
+
+3. Error Handling:
+- 404: Video file not found
+- 416: Invalid range request
+- 500: Server errors
+
+
+4. Data Flow:
+- Client requests video chunk with range header
+- Server parses range request
+- Creates read stream for chunk
+- Streams data back to client
+- Client receives and plays chunk
+
+
+5. Storage:
+- Video file stored on disk
+- Read in 4MB chunks
 
 ## Features
 
