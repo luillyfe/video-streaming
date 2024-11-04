@@ -62,7 +62,7 @@ async function routes(fastify: FastifyInstance) {
             return stream;
         } catch (error) {
             request.log.error(error)
-            if (!reply.statusCode && reply.statusCode === 200) {
+            if (!reply.statusCode || reply.statusCode === 200) {
                 reply.code(500)
             }
             throw error
@@ -78,6 +78,7 @@ export default routes
 // https://stackoverflow.com/q/21765555/3309466
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/206
+// https://fastify.dev/docs/latest/Guides/Getting-Started/
 
 // Range header
 // bytes 19005440-19051281/19051282
