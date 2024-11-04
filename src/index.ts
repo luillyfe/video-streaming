@@ -1,4 +1,3 @@
-import 'dotenv/config'
 // Import fastify
 import Fastify from "fastify";
 // Import routes
