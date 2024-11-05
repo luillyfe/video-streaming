@@ -4,15 +4,312 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Streaming with Fastify</title>
+    <title>Fastify Video Streaming</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #1e40af;
+            --background-color: #f8fafc;
+            --text-color: #1f2937;
+            --border-color: #e5e7eb;
+            --card-background: #ffffff;
+            --success-color: #22c55e;
+            --error-color: #ef4444;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+        }
+
+        .video-container {
+            background: var(--card-background);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 20px;
+            margin-bottom: 2rem;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            color: var(--secondary-color);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .range-requests {
+            margin-top: 1rem;
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+        }
+
+        .range-request-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 0.5rem;
+        }
+
+        .range-request-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+
+        .range-request-item:last-child {
+            border-bottom: none;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .status-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .fallback {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            background: var(--error-color);
+            color: white;
+            border-radius: 8px;
+        }
+
+        .no-video .fallback {
+            display: block;
+        }
+
+        .no-video video {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Fastify Video Streaming</h1>
-    <video controls width="600">
-        <source src="/video-streaming" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
+    <div class="container">
+        <header>
+            <h1>Fastify Video Streaming</h1>
+            <p class="subtitle">Demonstrating HTTP Range Requests and Partial Content</p>
+        </header>
+
+        <div class="video-container">
+            <video id="videoPlayer" controls>
+                <source src="/video-streaming" type="video/mp4">
+                <div class="fallback">
+                    Your browser does not support the video tag.
+                </div>
+            </video>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-title">Current Time</div>
+                    <div class="stat-value" id="currentTime">0:00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Buffered</div>
+                    <div class="stat-value" id="buffered">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Download Speed</div>
+                    <div class="stat-value" id="downloadSpeed">0 MB/s</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Video Quality</div>
+                    <div class="stat-value" id="videoQuality">Loading...</div>
+                </div>
+            </div>
+
+            <div class="range-requests">
+                <h3>Range Requests Log</h3>
+                <div class="range-request-list" id="rangeRequestList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if video is supported
+        if (!document.createElement('video').canPlayType) {
+            document.body.classList.add('no-video');
+        }
+
+        // Video player
+        const videoPlayer = document.getElementById('videoPlayer');
+        // Video stats
+        const currentTimeEl = document.getElementById('currentTime');
+        const bufferedEl = document.getElementById('buffered');
+        const downloadSpeedEl = document.getElementById('downloadSpeed');
+        const videoQualityEl = document.getElementById('videoQuality');
+        // Range request logs
+        const rangeRequestList = document.getElementById('rangeRequestList');
+
+        let lastLoadedBytes = 0;
+        let lastLoadedTime = Date.now();
+
+        // Format time to MM:SS
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            seconds = Math.floor(seconds % 60);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Format bytes to MB
+        function formatBytes(bytes) {
+            return (bytes / (1024 * 1024)).toFixed(2);
+        }
+
+        // Add range request to log
+        function addRangeRequest(range, status) {
+            const item = document.createElement('div');
+            item.className = 'range-request-item';
+
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `status status-${status === 206 ? 'success' : 'error'}`;
+            statusSpan.textContent = status;
+
+            item.appendChild(statusSpan);
+            item.appendChild(document.createTextNode(` ${range}`));
+
+            rangeRequestList.insertBefore(item, rangeRequestList.firstChild);
+
+            // Keep only last 10 requests
+            if (rangeRequestList.children.length > 10) {
+                rangeRequestList.removeChild(rangeRequestList.lastChild);
+            }
+        }
+
+        // Update video quality
+        function updateVideoQuality() {
+            const video = videoPlayer;
+            if (video.videoWidth && video.videoHeight) {
+                videoQualityEl.textContent = `${video.videoWidth}x${video.videoHeight}`;
+            }
+        }
+
+        // Monitor video events
+        videoPlayer.addEventListener('timeupdate', () => {
+            currentTimeEl.textContent = formatTime(videoPlayer.currentTime);
+        });
+
+        videoPlayer.addEventListener('progress', () => {
+            if (videoPlayer.buffered.length > 0) {
+                const bufferedEnd = videoPlayer.buffered.end(videoPlayer.buffered.length - 1);
+                const duration = videoPlayer.duration;
+                const bufferedPercent = (bufferedEnd / duration * 100).toFixed(1);
+                bufferedEl.textContent = `${bufferedPercent}%`;
+            }
+        });
+
+        // Calculate download speed
+        setInterval(() => {
+            const loadedBytes = videoPlayer.webkitVideoDecodedByteCount || 0;
+            const currentTime = Date.now();
+            const bytesPerSecond = (loadedBytes - lastLoadedBytes) / ((currentTime - lastLoadedTime) / 1000);
+
+            if (bytesPerSecond > 0) {
+                downloadSpeedEl.textContent = `${(bytesPerSecond / (1024 * 1024)).toFixed(2)} MB/s`;
+            }
+
+            lastLoadedBytes = loadedBytes;
+            lastLoadedTime = currentTime;
+        }, 1000);
+
+        // Monitor network requests using Performance API
+        const observer = new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                if (entry.name.includes('/video-streaming')) {
+                    const range = entry.serverTiming?.[0]?.description ||
+                        'Range information not available';
+                    addRangeRequest(range, entry.transferSize > 0 ? 206 : 416);
+                }
+            }
+        });
+
+        observer.observe({ entryTypes: ['resource'] });
+
+        // Update video quality when metadata is loaded
+        videoPlayer.addEventListener('loadedmetadata', updateVideoQuality);
+    </script>
+    </div>
 </body>
 
 </html>
+
+<!-- https://developer.mozilla.org/en-US/docs/Web/Media/Audio_and_video_delivery/buffering_seeking_time_ranges -->
+<!-- https://developer.mozilla.org/en-US/docs/Web/API/Performance -->
