@@ -45,7 +45,9 @@ async function routes(fastify: FastifyInstance) {
                 'Accept-Ranges': 'bytes',
                 'Content-Range': `bytes ${start}-${end}/${videoSize}`,
                 'Content-Length': contentLength,
-                'Content-Type': 'video/mp4'
+                'Content-Type': 'video/mp4',
+                // Adding support for server timing headers.
+                'Server-Timing': `range;desc="bytes ${start}-${end}/${videoSize}"`
             })
 
             reply.code(206) // Partial Content
@@ -79,6 +81,7 @@ export default routes
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/206
 // https://fastify.dev/docs/latest/Guides/Getting-Started/
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
 
 // Range header
 // bytes 19005440-19051281/19051282
