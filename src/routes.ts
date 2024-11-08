@@ -32,7 +32,7 @@ async function routes(fastify: FastifyInstance) {
             }
 
             const videoSize = fs.statSync(videoPath).size
-            const range = extractRangeData(request, request.headers, videoSize)
+            const range = extractRangeData(request, videoSize)
 
             request.log.info({ range })
 
