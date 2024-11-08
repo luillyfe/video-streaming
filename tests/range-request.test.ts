@@ -40,6 +40,34 @@ test("extractRangeData", async (t) => {
         // Assert
         t.equal(result, null)
     })
+
+    // Overlapping sequences are not valid
+    t.test("should handle unsatisfiable range requests", async (t) => {
+        // Arrange
+        const headers = { range: "bytes:0-10000,500-10500" }
+        const size = 100000
+        mockRequest.headers = headers
+
+        // Act
+        const result = extractRangeData(mockRequest, size)
+
+        // Assert
+        t.equal(result, null)
+    })
+
+    // Range exceeds content size
+    t.test("should handle malformed range requests", async (t) => {
+        // Arrange
+        const headers = { range: "string:bytes:90500-100500" }
+        const size = 100000
+        mockRequest.headers = headers
+
+        // Act
+        const result = extractRangeData(mockRequest, size)
+
+        // Assert
+        t.equal(result, null)
+    })
 })
 
 // https://automationpanda.com/2020/07/07/arrange-act-assert-a-pattern-for-writing-good-tests/
