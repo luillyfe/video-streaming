@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import extractRangeData from "./range-request"
+import config from "./config"
 
 
 async function routes(fastify: FastifyInstance) {
@@ -22,7 +23,7 @@ async function routes(fastify: FastifyInstance) {
     // Video Streaming
     fastify.get("/video-streaming", async (request: FastifyRequest, reply: FastifyReply) => {
         try {
-            const videoPath = "./video.mp4"
+            const videoPath = config.video.path
 
             // Check if video exists
             if (!fs.existsSync(videoPath)) {
@@ -42,7 +43,7 @@ async function routes(fastify: FastifyInstance) {
 
             // Only single range are suppoerted (Multiple requested ranges are discarted)
             const singleRange = range.ranges[0]
-            const chunkSize = 4 * 1e6; // 4MB chunks
+            const chunkSize = config.video.chunkSize
             const start = singleRange.start
             const end = Math.min(
                 singleRange.end || (start + chunkSize - 1),

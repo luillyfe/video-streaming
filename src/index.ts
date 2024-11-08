@@ -2,6 +2,7 @@
 import Fastify from "fastify";
 // Import routes
 import mainRoute from "./routes";
+import config from "./config";
 
 // Configure logger
 const fastify = Fastify({ logger: true })
@@ -11,7 +12,7 @@ fastify.register(mainRoute)
 
 
 // Run the server
-fastify.listen({ port: 3000 }, (err, address) => {
+fastify.listen({ port: config.server.port, host: config.server.host }, (err, address) => {
     if (err) {
         fastify.log.error("something wrong happened")
         process.exit(1)
