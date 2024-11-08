@@ -2,17 +2,19 @@
   "scripts": {
     "prod": "node dist/index.js",
     "build": "tsc",
-    "dev": "nodemon --watch src --exec ts-node src/index.ts"
+    "dev": "nodemon --watch src --exec ts-node src/index.ts",
+    "test": "tap run"
   },
   "dependencies": {
     "fastify": "^5.1.0",
     "range-parser": "^1.2.1"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
     "@types/node": "^22.8.6",
     "@types/range-parser": "^1.2.7",
     "nodemon": "^3.1.7",
-    "ts-node": "^10.9.2"
+    "tap": "^21.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
   }
 }
