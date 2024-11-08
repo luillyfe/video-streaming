@@ -1,14 +1,12 @@
 import { FastifyRequest } from "fastify";
-import { IncomingHttpHeaders } from "node:http"
 import RangeParser from "range-parser"
 
 function extractRangeData(
     request: FastifyRequest,
-    headers: IncomingHttpHeaders,
     size: number
 ): { unit: string; ranges: RangeParser.Ranges } | null {
     // Get range header from incoming request
-    const range = headers.range
+    const range = request.headers.range
 
     // No range header present
     if (!range) { return null }
