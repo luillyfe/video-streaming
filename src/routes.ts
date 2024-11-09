@@ -1,10 +1,9 @@
 import fs from "node:fs"
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
-import extractRangeData from "./range-request"
-import config from "./config"
+import { VideoStreamError, videoStreamService } from "./services/video-stream"
 
 
-async function routes(fastify: FastifyInstance) {
+async function configureRoutes(fastify: FastifyInstance) {
     // Intercept all errors related to streaming
     fastify.setErrorHandler((error: VideoStreamError, request: FastifyRequest, reply: FastifyReply) => {
         request.log.error(error)
@@ -21,91 +20,10 @@ async function routes(fastify: FastifyInstance) {
     })
 
     // Video Streaming
-    fastify.get("/video-streaming", async (request: FastifyRequest, reply: FastifyReply) => {
-        try {
-            const videoPath = config.video.path
-
-            // Check if video exists
-            if (!fs.existsSync(videoPath)) {
-                reply.code(404)
-                throw new VideoNotFoundError()
-            }
-
-            const videoSize = fs.statSync(videoPath).size
-            const range = extractRangeData(request, videoSize)
-
-            request.log.info({ range })
-
-            if (!range) {
-                reply.code(416)
-                throw new RangeNotSatisfiableError()
-            }
-
-            // Only single range are suppoerted (Multiple requested ranges are discarted)
-            const singleRange = range.ranges[0]
-            const chunkSize = config.video.chunkSize
-            const start = singleRange.start
-            const end = Math.min(
-                singleRange.end || (start + chunkSize - 1),
-                videoSize - 1
-            )
-            const contentLength = end - start + 1
-
-            // Set appropriate headers for partial content
-            reply.headers({
-                'Accept-Ranges': 'bytes',
-                'Content-Range': `bytes ${start}-${end}/${videoSize}`,
-                'Content-Length': contentLength,
-                'Content-Type': 'video/mp4',
-                // Adding support for server timing headers.
-                'Server-Timing': `range;desc="bytes ${start}-${end}/${videoSize}"`
-            })
-
-            reply.code(206) // Partial Content
-
-            // Create read stream for the specified range
-            const stream = fs.createReadStream(videoPath, { start, end });
-
-            // Handle stream errors
-            stream.on('error', (error) => {
-                request.log.error(error);
-                reply.code(500).send('Internal Server Error');
-            });
-
-            return stream;
-        } catch (error) {
-            request.log.error(error)
-            if (!reply.statusCode || reply.statusCode === 200) {
-                reply.code(500)
-            }
-            throw error
-        }
-    })
+    fastify.get("/video-streaming", videoStreamService.createStream)
 }
 
-interface VideoStreamError {
-    statusCode: number;
-    message: string;
-    name: string
-}
-
-class VideoNotFoundError extends Error implements VideoStreamError {
-    statusCode = 404;
-    name = "VideoNotFoundError"
-    constructor() {
-        super('Video file not found!');
-    }
-}
-
-class RangeNotSatisfiableError extends Error implements VideoStreamError {
-    statusCode = 416;
-    name = "RangeNotSatisfiableError"
-    constructor() {
-        super('Range not satisfiable!');
-    }
-}
-
-export default routes
+export default configureRoutes
 
 // Sources
 // https://www.nearform.com/digital-community/how-to-implement-video-streaming-with-fastify/
