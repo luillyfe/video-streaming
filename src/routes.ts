@@ -2,7 +2,39 @@ import fs from "node:fs"
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import { VideoStreamError, videoStreamService } from "./services/video-stream"
 
+// Define constant for content types
+const CONTENT_TYPES = {
+    HTML: 'text/html',
+} as const
 
+// Define interface for CSP nonce patterns
+interface CSPNoncePatterns {
+    readonly SCRIPT: RegExp;
+    readonly STYLE: RegExp;
+}
+
+const CSP_NONCE_PATTERNS: CSPNoncePatterns = {
+    SCRIPT: /<script>/g,
+    STYLE: /<style>/g,
+} as const
+
+/**
+ * Replaces HTML tags with nonce-enabled versions
+ * @param html - Original HTML content
+ * @param nonces - CSP nonces for script and style
+ * @returns HTML content with nonces
+ */
+function injectNonces(html: string, nonces: { script: string; style: string }): string {
+    return html
+        .replace(CSP_NONCE_PATTERNS.SCRIPT, `<script nonce="${nonces.script}">`)
+        .replace(CSP_NONCE_PATTERNS.STYLE, `<style nonce="${nonces.style}">`)
+}
+
+
+/**
+ * Configures routes for the Fastify instance
+ * @param fastify - Fastify instance
+ */
 async function configureRoutes(fastify: FastifyInstance) {
     // Intercept all errors related to streaming
     fastify.setErrorHandler((error: VideoStreamError, request: FastifyRequest, reply: FastifyReply) => {
@@ -14,12 +46,29 @@ async function configureRoutes(fastify: FastifyInstance) {
         })
     })
 
-    // Main route
-    fastify.get('/', async () => {
-        return fs.createReadStream("./index.html")
+    // Configures the main route with CSP nonces
+    fastify.get('/', {
+        helmet: {
+            // TODO: Consider removing CSP nonces as per Mozilla's recommendation
+            enableCSPNonces: true
+        }
+    }, async (_, reply: FastifyReply) => {
+        try {
+            const html = await fs.promises.readFile("./index.html", 'utf-8')
+            const nonceEnabledHtml = injectNonces(html, {
+                script: reply.cspNonce.script,
+                style: reply.cspNonce.style
+            })
+
+            reply.header('Content-Type', CONTENT_TYPES.HTML)
+            return reply.send(nonceEnabledHtml)
+        } catch (error) {
+            reply.log.error(error)
+            throw error
+        }
     })
 
-    // Video Streaming
+    // Configures the video streaming route
     fastify.get("/video-streaming", videoStreamService.createStream)
 }
 
@@ -34,6 +83,15 @@ export default configureRoutes
 // https://fastify.dev/docs/latest/Guides/Getting-Started/
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
 // https://fastify.dev/docs/v5.1.x/Reference/Errors/#errors-in-fastify-lifecycle-hooks-and-a-custom-error-handler
+// https://github.com/fastify/fastify-helmet?tab=readme-ov-file#example---fastifyhelmet-configuration-using-the-helmet-shorthand-route-option
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
+// https://github.com/fastify/fastify-helmet?tab=readme-ov-file#content-security-policy-nonce
+
+// Note From Mozilla Foundation: Only use nonce for cases where you have no way around using unsafe inline script 
+// or style contents. If you don't need nonce, don't use it. If your script is static, 
+// you could also use a CSP hash instead. (See usage notes on unsafe inline script.) 
+// Always try to take full advantage of CSP protections and avoid nonces or unsafe inline scripts whenever possible.
 
 // Range header
 // bytes 19005440-19051281/19051282
