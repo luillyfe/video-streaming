@@ -2,7 +2,39 @@ import fs from "node:fs"
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import { VideoStreamError, videoStreamService } from "./services/video-stream"
 
+// Define constant for content types
+const CONTENT_TYPES = {
+    HTML: 'text/html',
+} as const
 
+// Define interface for CSP nonce patterns
+interface CSPNoncePatterns {
+    readonly SCRIPT: RegExp;
+    readonly STYLE: RegExp;
+}
+
+const CSP_NONCE_PATTERNS: CSPNoncePatterns = {
+    SCRIPT: /<script>/g,
+    STYLE: /<style>/g,
+} as const
+
+/**
+ * Replaces HTML tags with nonce-enabled versions
+ * @param html - Original HTML content
+ * @param nonces - CSP nonces for script and style
+ * @returns HTML content with nonces
+ */
+function injectNonces(html: string, nonces: { script: string; style: string }): string {
+    return html
+        .replace(CSP_NONCE_PATTERNS.SCRIPT, `<script nonce="${nonces.script}">`)
+        .replace(CSP_NONCE_PATTERNS.STYLE, `<style nonce="${nonces.style}">`)
+}
+
+
+/**
+ * Configures routes for the Fastify instance
+ * @param fastify - Fastify instance
+ */
 async function configureRoutes(fastify: FastifyInstance) {
     // Intercept all errors related to streaming
     fastify.setErrorHandler((error: VideoStreamError, request: FastifyRequest, reply: FastifyReply) => {
@@ -14,25 +46,29 @@ async function configureRoutes(fastify: FastifyInstance) {
         })
     })
 
-    // Main route
+    // Configures the main route with CSP nonces
     fastify.get('/', {
         helmet: {
-            // Let's weaken our CSP protection 👺👺👺 for fun
-            // Enable csp nonces generation with default content-security-policy option
+            // TODO: Consider removing CSP nonces as per Mozilla's recommendation
             enableCSPNonces: true
         }
     }, async (_, reply: FastifyReply) => {
-        reply.header('Content-Type', 'text/html'); // Explicitly set the Content-Type header
+        try {
+            const html = await fs.promises.readFile("./index.html", 'utf-8')
+            const nonceEnabledHtml = injectNonces(html, {
+                script: reply.cspNonce.script,
+                style: reply.cspNonce.style
+            })
 
-        // Read the HTML file content
-        let html = await fs.promises.readFile("./index.html", 'utf-8');
-        html = html.replace(/<script>/g, `<script nonce="${reply.cspNonce.script}">`)
-        html = html.replace(/<style>/g, `<style nonce="${reply.cspNonce.style}">`)
-
-        return reply.send(html)
+            reply.header('Content-Type', CONTENT_TYPES.HTML)
+            return reply.send(nonceEnabledHtml)
+        } catch (error) {
+            reply.log.error(error)
+            throw error
+        }
     })
 
-    // Video Streaming
+    // Configures the video streaming route
     fastify.get("/video-streaming", videoStreamService.createStream)
 }
 

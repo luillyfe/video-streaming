@@ -3,7 +3,7 @@ import Fastify from "fastify";
 import helmet from "@fastify/helmet"
 
 // Import routes
-import mainRoute from "./routes";
+import routes from "./routes";
 import config from "./config";
 
 // Configure logger
@@ -13,7 +13,7 @@ const fastify = Fastify({ logger: true })
 fastify.register(helmet)
 
 // Use the register API to configure a new route
-fastify.register(mainRoute)
+fastify.register(routes)
 
 
 // Run the server
