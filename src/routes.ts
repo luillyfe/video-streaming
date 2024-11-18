@@ -52,7 +52,7 @@ async function configureRoutes(fastify: FastifyInstance) {
             // TODO: Consider removing CSP nonces as per Mozilla's recommendation
             enableCSPNonces: true
         }
-    }, async (request: FastifyRequest, reply: FastifyReply) => {
+    }, async (_, reply: FastifyReply) => {
         try {
             // HTML cache manager
             const html = await htmlCache.getHTML()
