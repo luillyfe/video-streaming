@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import { VideoStreamError, videoStreamService } from "./services/video-stream"
 import { htmlCache } from "./htmlCache";
@@ -62,19 +61,8 @@ async function configureRoutes(fastify: FastifyInstance) {
                 style: reply.cspNonce.style
             })
 
-            // Cache policy
-            reply.header('Cache-Control', 'public, max-age=2592000, immutable')
             reply.header('Content-Type', CONTENT_TYPES.HTML)
 
-            // Use ETag for caching
-            const etag = `${crypto.createHash('sha256').update(html).digest('hex')}`;
-            reply.header('ETag', etag)
-
-            // Check if client has valid cached version
-            const ifNoneMatch = request.headers['if-none-match']
-            if (ifNoneMatch === etag) {
-                return reply.status(304).send()
-            }
 
             return reply.send(nonceEnabledHtml)
         } catch (error) {
@@ -102,12 +90,6 @@ export default configureRoutes
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
 // https://github.com/fastify/fastify-helmet?tab=readme-ov-file#content-security-policy-nonce
-// https://github.com/fastify/fastify-etag 
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
-
-// Fastify Etag plugin does noes allow for setting the behaviour on just some routes. Maybe in the upcoming future
-// Fastify Eyag made more sense but for now I want wanted to be selective in the routing match.
 
 // Note From Mozilla Foundation: Only use nonce for cases where you have no way around using unsafe inline script 
 // or style contents. If you don't need nonce, don't use it. If your script is static, 
