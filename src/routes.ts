@@ -1,6 +1,6 @@
-import fs from "node:fs"
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import { VideoStreamError, videoStreamService } from "./services/video-stream"
+import { htmlCache } from "./htmlCache";
 
 // Define constant for content types
 const CONTENT_TYPES = {
@@ -54,13 +54,16 @@ async function configureRoutes(fastify: FastifyInstance) {
         }
     }, async (_, reply: FastifyReply) => {
         try {
-            const html = await fs.promises.readFile("./index.html", 'utf-8')
+            // HTML cache manager
+            const html = await htmlCache.getHTML()
             const nonceEnabledHtml = injectNonces(html, {
                 script: reply.cspNonce.script,
                 style: reply.cspNonce.style
             })
 
             reply.header('Content-Type', CONTENT_TYPES.HTML)
+
+
             return reply.send(nonceEnabledHtml)
         } catch (error) {
             reply.log.error(error)
